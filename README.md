@@ -602,3 +602,10 @@ export default PointerElement;
 ```
 
 As you can see using manual gestures is really easy but as you can imagine, manual gestures are a powerful tool that makes it possible to accomplish things that were previously impossible with RNGH.
+
+# Modifying existing gestures
+While manual gestures open great possibilities we are aware that reimplementing pinch or rotation from scratch just because you need to activate in specific circumstances or require position of the fingers, would be a waste of time as those gestures are already available. Therefore, you can use touch events with every gesture to extract more detailed information about the gesture than what the basic events alone provide. We also added a ```manualActivation``` modifier on all continuous gestures, which prevents the gesture it is applied to from activating automatically, giving you full control over its behavior.
+
+This functionality makes another highly requested feature possible: drag after long press. Simply set ```manualActivation``` to true on a ```PanGesture``` and use ```StateManager``` to fail the gesture if the user attempts to drag the component sooner than the duration of the long press.
+
+For more information visit [doc](https://docs.swmansion.com/react-native-gesture-handler/docs/category/gestures)
