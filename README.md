@@ -430,4 +430,94 @@ A gesture can be in one of the six possible states:
 ## State flows
 The most typical flow of state is when a gesture picks up on an initial touch event, then recognizes it, then acknowledges its ending and resets itself back to the initial state.
 
-The flow looks as follows:
+
+## Events
+There are three types of events in ```RNGH2```: ```StateChangeEvent```, ```GestureEvent``` and ```PointerEvent```. 
+The ```StateChangeEvent``` is send every time a gesture moves to a different state, while ```GestureEvent``` is send every time a gesture is updated. The first two carry a gesture-specific data and a state property, indicating the current state of the gesture. ```StateChangeEvent``` also carries a oldState property indicating the previous state of the gesture. ```PointerEvent``` carries information about raw touch events, like touching the screen or moving the finger. These events are handled internally before they are passed along to the correct callbacks:
+
+- **onBegin**: Is called when a gesture transitions to the ```BEGAN``` state.
+- **onStart**: Is called when a gesture transitions to the ```ACTIVE``` state.
+- **onEnd**: Is called when a gesture transitions from the ```ACTIVE``` state to the ```END```, ```FAILED```, or ```CANCELLED``` state. If the gesture transitions to the ```END``` state, the success argument is set to true otherwise it is set to false.
+- **onFinalize**: Is called when a gesture transitions to the ```END```, ```FAILED```, or ```CANCELLED``` state. If the gesture transitions to the ```END``` state, the success argument is set to true otherwise it is set to false. If the gesture transitions from the ```ACTIVE``` state, it will be called after ```onEnd```.
+- **onUpdate**: Is called every time a gesture is updated while it is in the ```ACTIVE``` state.
+- **onPointerDown**: Is called when new pointers are placed on the screen. It may carry information about more than one pointer because the events are batched.
+- **onPointerMove**: Is called when pointers are moved on the screen. It may carry information about more than one pointer because the events are batched.
+- **onPointerUp**: Is called when pointers are lifted from the screen. It may carry information about more than one pointer because the events are batched.
+- **onPointerCancelled**:Is called when there will be no more information about this pointer. It may be called because the gesture has ended or was interrupted. It may carry information about more than one pointer because the events are batched.
+
+# Quick Start
+**RNGH2** provides much simpler way to add gestures to your app. All you need to do is wrap the view that you want your gesture to work on with **GestureDetector**, define the gesture and pass it to detector. That's all!
+
+To demonstrate how you would use the new API, let's make a simple app where you can drag a ball around. You will need to add ```react-native-gesture-handle```r (for gestures) and ```react-native-reanimated``` (for animations) modules.
+
+```js
+import React from "react";
+import { SafeAreaView, StyleSheet } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+
+const styles = StyleSheet.create({
+  ball: {
+    width: 100,
+    height: 100,
+    borderRadius: 100,
+    backgroundColor: "blue",
+    alignSelf: "center",
+  },
+});
+
+const Ball = () => {
+  const isPressed = useSharedValue(false);
+  const offset = useSharedValue({ x: 0, y: 0 });
+
+  const animatedStyles = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: offset.value.x },
+        { translateY: offset.value.y },
+        { scale: withSpring(isPressed.value ? 1.2 : 1) },
+      ],
+      backgroundColor: isPressed.value ? "yellow" : "blue",
+    };
+  });
+
+  const start = useSharedValue({ x: 0, y: 0 });
+  const gesture = Gesture.Pan()
+    .onBegin(() => {
+      isPressed.value = true;
+    })
+    .onUpdate((e) => {
+      offset.value = {
+        x: e.translationX + start.value.x,
+        y: e.translationY + start.value.y,
+      };
+    })
+    .onEnd(() => {
+      start.value = {
+        x: offset.value.x,
+        y: offset.value.y,
+      };
+    })
+    .onFinalize(() => {
+      isPressed.value = false;
+    });
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <SafeAreaView>
+        <Animated.View style={[styles.ball, animatedStyles]} />
+      </SafeAreaView>
+    </GestureDetector>
+  );
+};
+
+export default Ball;
+```
+
+We need to define shared values to keep track of the ball position and create animated styles in order to be able to position the ball on the screen and add it to the ball's styles. Then define the ```pan gesture``` and assign it to the ```detector```.
+
+Note the ***start*** shared value. We need it to store the position of the ball at the moment we grab it to be able to correctly position it later, because we only have access to translation relative to the starting point of the gesture.
