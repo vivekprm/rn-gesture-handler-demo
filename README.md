@@ -521,3 +521,84 @@ export default Ball;
 We need to define shared values to keep track of the ball position and create animated styles in order to be able to position the ball on the screen and add it to the ball's styles. Then define the ```pan gesture``` and assign it to the ```detector```.
 
 Note the ***start*** shared value. We need it to store the position of the ball at the moment we grab it to be able to correctly position it later, because we only have access to translation relative to the starting point of the gesture.
+
+# Manual gestures
+```RNGH2``` finally brings one of the most requested features: ```manual gestures``` and ```touch events```. To demonstrate how to make a manual gesture we will make a simple one that tracks all pointers on the screen.
+
+- First, we need a way to store information about the pointer: whether it should be visible and its position.
+- We also need a component to mark where a pointer is. In order to accomplish that we will make a component that accepts two shared values: one holding information about the pointer using the interface we just created, the other holding a bool indicating whether the gesture has activated. In this example when the gesture is not active, the ball representing it will be blue and when it is active the ball will be red and slightly bigger.
+- Now we have to make a component that will handle the gesture and draw all the pointer indicators. We will store data about pointers in an array of size 12 as that is the maximum number of touches that RNGH will track, and render them inside an Animated.View.
+- We have our components set up and we can finally get to making the gesture! We will start with ```onTouchesDown``` where we need to set position of the pointers and make them visible. We can get this information from the touches property of the event. In this case we will also check how many pointers are on the screen and activate the gesture if there are at least two.
+- Next, we will handle pointer movement. In ```onTouchesMove``` we will simply update the position of moved pointers.
+- We also need to handle lifting fingers from the screen, which corresponds to ```onTouchesUp```. Here we will just hide the pointers that were lifted and end the gesture if there are no more pointers on the screen. Note that we are not handling ```onTouchesCancelled``` as in this very basic case we don't expect it to happen, however you should clear data about cancelled pointers (most of the time all active ones) when it is called.
+- Now that our pointers are being tracked correctly and we have the state management, we can handle activation and ending of the gesture. In our case, we will simply set the active shared value either to true or false.
+
+```js
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, { useSharedValue } from "react-native-reanimated";
+import PointerElement from "./PointerElement";
+
+export default function Example() {
+  const trackedPointers = [];
+  const active = useSharedValue(false);
+  const initialPointer = {
+    visible: false,
+    x: 0,
+    y: 0,
+  };
+
+  for (let i = 0; i < 12; i++) {
+    trackedPointers[i] = useSharedValue(initialPointer);
+  }
+
+  const gesture = Gesture.Manual();
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={{ flex: 1 }}>
+        {trackedPointers.map((pointer, index) => (
+          <PointerElement pointer={pointer} active={active} key={index} />
+        ))}
+      </Animated.View>
+    </GestureDetector>
+  );
+}
+```
+
+```js
+import { StyleSheet } from "react-native";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
+
+const styles = StyleSheet.create({
+  pointer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "red",
+    position: "absolute",
+    marginStart: -30,
+    marginTop: -30,
+  },
+});
+
+function PointerElement(props) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: props.pointer.value.x },
+      { translateY: props.pointer.value.y },
+      {
+        scale:
+          (props.pointer.value.visible ? 1 : 0) *
+          (props.active.value ? 1.3 : 1),
+      },
+    ],
+    backgroundColor: props.active.value ? "red" : "blue",
+  }));
+
+  return <Animated.View style={[styles.pointer, animatedStyle]} />;
+}
+
+export default PointerElement;
+```
+
+As you can see using manual gestures is really easy but as you can imagine, manual gestures are a powerful tool that makes it possible to accomplish things that were previously impossible with RNGH.

@@ -1,10 +1,10 @@
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import Ball from "./Ball";
+import Example from "./Example";
 
 function App() {
   return (
     <GestureHandlerRootView>
-      <Ball />
+      <Example />
     </GestureHandlerRootView>
   );
 }
